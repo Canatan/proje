@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Profil</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Stil tanımları -->
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        #sidebar {
+            height: 100vh;
+            width: 250px;
+            background-color: #343a40;
+            position: fixed;
+        }
+        #sidebar .nav-link {
+            color: #adb5bd;
+        }
+        #sidebar .nav-link:hover {
+            background-color: #495057;
+        }
+        #content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        .navbar {
+            background-color: #343a40;
+        }
+        .navbar .navbar-brand, .navbar .nav-link {
+            color: #fff;
+        }
+        .active-link {
+            background-color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <!-- Yan Menü (Sidebar) -->
+    <div id="sidebar">
+        <h4 class="text-white text-center py-3">Yönetim Paneli</h4>
+        <nav class="nav flex-column">
+            <a class="nav-link" href="anasayfa.html">Anasayfa</a>
+            <a class="nav-link" href="acces-points.html">Access Points</a>
+            <a class="nav-link" href="switchler.html">Switchler</a>
+            <a class="nav-link" href="kameralar.html">Kameralar</a>
+            <!-- Admin ise Admin Paneli linkini göster -->
+            <a class="nav-link" href="admin-panel.html" id="adminPanelLink">Admin Paneli</a>
+            <a class="nav-link" href="#" id="logoutBtn">Çıkış</a>
+        </nav>
+    </div>
+
+    <!-- İçerik Alanı -->
+    <div id="content">
+        <!-- Üst Menü (Navbar) -->
+        <nav class="navbar navbar-expand-lg navbar-dark">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="#">Profil</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Menü">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="profil.html">Profil</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Bildirimler</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Ana İçerik -->
+        <div class="container mt-4">
+            <h2>Profil Bilgileri</h2>
+            <p>Kullanıcı adınız: <strong id="usernameDisplay"></strong></p>
+            <p>Rolünüz: <strong id="roleDisplay"></strong></p>
+
+            <!-- Şifre Değiştirme -->
+            <div class="mt-5">
+                <h4>Şifre Değiştir</h4>
+                <form id="changeOwnPasswordForm">
+                    <div class="mb-3">
+                        <label for="currentPassword" class="form-label">Mevcut Şifre</label>
+                        <input type="password" class="form-control" id="currentPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newOwnPassword" class="form-label">Yeni Şifre</label>
+                        <input type="password" class="form-control" id="newOwnPassword" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Şifreyi Değiştir</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Oturum ve Rol Kontrolü -->
+    <script>
+        // Oturum kontrolü
+        if (localStorage.getItem('loggedIn') !== 'true') {
+            window.location.href = 'login.html'; // Giriş yapılmamışsa login sayfasına yönlendir
+        }
+
+        // Kullanıcı bilgilerini göster
+        const usernameDisplay = document.getElementById('usernameDisplay');
+        const roleDisplay = document.getElementById('roleDisplay');
+        const username = localStorage.getItem('username');
+        const role = localStorage.getItem('role');
+        usernameDisplay.textContent = username;
+        roleDisplay.textContent = role;
+
+        // Kullanıcı rolüne göre Admin Paneli linkini göster/gizle
+        if (role !== 'admin') {
+            document.getElementById('adminPanelLink').style.display = 'none';
+        }
+
+        // Çıkış işlemi
+        const logoutBtn = document.getElementById('logoutBtn');
+        logoutBtn.addEventListener('click', function() {
+            localStorage.removeItem('loggedIn'); // Oturum verisini sil
+            localStorage.removeItem('role');
+            localStorage.removeItem('username');
+            window.location.href = 'login.html'; // Giriş ekranına yönlendir
+        });
+
+        // Şifre Değiştirme
+        const changeOwnPasswordForm = document.getElementById('changeOwnPasswordForm');
+        changeOwnPasswordForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newOwnPassword = document.getElementById('newOwnPassword').value;
+
+            try {
+                // Mevcut şifreyi doğrulamak için giriş yapmayı deneyin
+                const loginResponse = await fetch('http://localhost:3000/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password: currentPassword }),
+                });
+
+                if (loginResponse.ok) {
+                    // Şifreyi güncelle
+                    const response = await fetch(`http://localhost:3000/api/users/${username}/password`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ password: newOwnPassword }),
+                    });
+
+                    if (response.ok) {
+                        alert('Şifreniz başarıyla değiştirildi.');
+                        changeOwnPasswordForm.reset();
+                    } else {
+                        const errorData = await response.json();
+                        alert(errorData.message || 'Şifre değiştirilemedi.');
+                    }
+                } else {
+                    alert('Mevcut şifreniz yanlış.');
+                }
+            } catch (error) {
+                console.error('Şifre değiştirirken hata:', error);
+                alert('Sunucuya bağlanırken bir hata oluştu.');
+            }
+        });
+    </script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+</body>
+</html>
